@@ -48,10 +48,12 @@ const (
 )
 
 var (
+	// 各collector的构造函数
 	factories      = make(map[string]func() (Collector, error))
+	// 各collector的当前状态
 	collectorState = make(map[string]*bool)
 )
-// collector注册
+// collector注册 具体的collector进行调用
 func registerCollector(collector string, isDefaultEnabled bool, factory func() (Collector, error)) {
 	var helpDefaultState string
 	if isDefaultEnabled {
@@ -60,6 +62,7 @@ func registerCollector(collector string, isDefaultEnabled bool, factory func() (
 		helpDefaultState = "disabled"
 	}
 
+	fmt.Println("collector.%s", collector)
 	flagName := fmt.Sprintf("collector.%s", collector)
 	flagHelp := fmt.Sprintf("Enable the %s collector (default: %s).", collector, helpDefaultState)
 	defaultValue := fmt.Sprintf("%v", isDefaultEnabled)
@@ -112,7 +115,10 @@ func (n NodeCollector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implements the prometheus.Collector interface.
 // 根据collector采集数据
+// 每次request 调用该方法
 func (n NodeCollector) Collect(ch chan<- prometheus.Metric) {
+	now := time.Now()
+	fmt.Println("Collect now:", time.Now().String())
 	wg := sync.WaitGroup{}
 	wg.Add(len(n.Collectors))
 	for name, c := range n.Collectors {
@@ -122,6 +128,7 @@ func (n NodeCollector) Collect(ch chan<- prometheus.Metric) {
 		}(name, c)
 	}
 	wg.Wait()
+	fmt.Println("over time:",time.Since(now))
 }
 // 执行collector的采集函数
 func execute(name string, c Collector, ch chan<- prometheus.Metric) {

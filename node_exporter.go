@@ -15,10 +15,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
-	_ "net/http/pprof"
-	"sort"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
@@ -26,6 +22,9 @@ import (
 	"github.com/prometheus/node_exporter/collector"
 	"github.com/prometheus/node_exporter/https"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"net/http"
+	_ "net/http/pprof"
+	"sort"
 )
 
 // handler wraps an unfiltered http.Handler but uses a filtered handler,
