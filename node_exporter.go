@@ -39,7 +39,7 @@ type handler struct {
 	includeExporterMetrics  bool
 	maxRequests             int
 }
-
+// 核心执行函数
 func newHandler(includeExporterMetrics bool, maxRequests int) *handler {
 	h := &handler{
 		exporterMetricsRegistry: prometheus.NewRegistry(),
@@ -86,7 +86,11 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // fly. The former is accomplished by calling innerHandler without any arguments
 // (in which case it will log all the collectors enabled via command-line
 // flags).
+// innerHandler用于创建一个未经过滤的http.Handler，以供外部处理程序以及运行中创建的过滤处理程序进行包装
+// 。 前者是通过不带任何参数的方式调用innerHandler来完成的
+// （在这种情况下，它将记录通过命令行标志启用的所有收集器）。
 func (h *handler) innerHandler(filters ...string) (http.Handler, error) {
+	// 生产新的采集器集合
 	nc, err := collector.NewNodeCollector(filters...)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create collector: %s", err)
@@ -94,6 +98,7 @@ func (h *handler) innerHandler(filters ...string) (http.Handler, error) {
 
 	// Only log the creation of an unfiltered handler, which should happen
 	// only once upon startup.
+	// 合并采集器
 	if len(filters) == 0 {
 		log.Infof("Enabled collectors:")
 		collectors := []string{}
@@ -108,6 +113,7 @@ func (h *handler) innerHandler(filters ...string) (http.Handler, error) {
 
 	r := prometheus.NewRegistry()
 	r.MustRegister(version.NewCollector("node_exporter"))
+	// 注册采集器
 	if err := r.Register(nc); err != nil {
 		return nil, fmt.Errorf("couldn't register node collector: %s", err)
 	}
@@ -132,22 +138,27 @@ func (h *handler) innerHandler(filters ...string) (http.Handler, error) {
 
 func main() {
 	var (
+		// web监听地址
 		listenAddress = kingpin.Flag(
 			"web.listen-address",
 			"Address on which to expose metrics and web interface.",
 		).Default(":9100").String()
+		// metric暴露地址
 		metricsPath = kingpin.Flag(
 			"web.telemetry-path",
 			"Path under which to expose metrics.",
 		).Default("/metrics").String()
+		// 是否警用采集器的metric
 		disableExporterMetrics = kingpin.Flag(
 			"web.disable-exporter-metrics",
 			"Exclude metrics about the exporter itself (promhttp_*, process_*, go_*).",
 		).Bool()
+		// 最大采集数
 		maxRequests = kingpin.Flag(
 			"web.max-requests",
 			"Maximum number of parallel scrape requests. Use 0 to disable.",
 		).Default("40").Int()
+		// tls配置文件地址
 		configFile = kingpin.Flag(
 			"web.config",
 			"Path to config yaml file that can enable TLS or authentication.",
@@ -161,7 +172,7 @@ func main() {
 
 	log.Infoln("Starting node_exporter", version.Info())
 	log.Infoln("Build context", version.BuildContext())
-
+	// 路由设置
 	http.Handle(*metricsPath, newHandler(!*disableExporterMetrics, *maxRequests))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
@@ -175,6 +186,7 @@ func main() {
 
 	log.Infoln("Listening on", *listenAddress)
 	server := &http.Server{Addr: *listenAddress}
+	// 启动http服务
 	if err := https.Listen(server, *configFile); err != nil {
 		log.Fatal(err)
 	}

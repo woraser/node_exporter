@@ -51,7 +51,7 @@ var (
 	factories      = make(map[string]func() (Collector, error))
 	collectorState = make(map[string]*bool)
 )
-
+// collector注册
 func registerCollector(collector string, isDefaultEnabled bool, factory func() (Collector, error)) {
 	var helpDefaultState string
 	if isDefaultEnabled {
@@ -76,6 +76,7 @@ type NodeCollector struct {
 }
 
 // NewNodeCollector creates a new NodeCollector.
+// 创建节点采集器
 func NewNodeCollector(filters ...string) (*NodeCollector, error) {
 	f := make(map[string]bool)
 	for _, filter := range filters {
@@ -110,6 +111,7 @@ func (n NodeCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 // Collect implements the prometheus.Collector interface.
+// 根据collector采集数据
 func (n NodeCollector) Collect(ch chan<- prometheus.Metric) {
 	wg := sync.WaitGroup{}
 	wg.Add(len(n.Collectors))
@@ -121,7 +123,7 @@ func (n NodeCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 	wg.Wait()
 }
-
+// 执行collector的采集函数
 func execute(name string, c Collector, ch chan<- prometheus.Metric) {
 	begin := time.Now()
 	err := c.Update(ch)
